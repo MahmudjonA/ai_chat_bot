@@ -1,0 +1,40 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            cd /root/mid_term_task || git clone https://github.com/MahmudjonA/ai_chat_bot.git /root/mid_term_task
+            cd /root/mid_term_task
+            git pull
+
+            docker stop ai-container || true
+            docker rm ai-container || true
+
+            docker build -t ai-chatbot .
+
+            docker run -d \
+              --name ai-container \
+              --restart always \
+              -p 80:8000 \
+              --env-file .env \
+              ai-chatbot
+          EOF
