@@ -21,7 +21,7 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << EOF
             cd /root/mid_term_task || git clone https://github.com/MahmudjonA/ai_chat_bot.git /root/mid_term_task
             cd /root/mid_term_task
             git pull
