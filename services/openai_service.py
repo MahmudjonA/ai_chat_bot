@@ -77,7 +77,7 @@ def get_instructions(lang: str):
         return """
         Faqat hujjatlar asosida javob ber.
         Agar bo‘lmasa — "topilmadi".
-        Qisqa va oddiy yoz.
+        Qisqa va oddiy yoz!
         """
 
     return "Answer simply."
@@ -98,7 +98,7 @@ def ask_question(question, lang="ru"):
     )
 
     return response.output_text
-    
+
 def get_or_create_vector_store():
     store_id = os.getenv("VECTOR_STORE_ID")
 
