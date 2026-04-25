@@ -35,6 +35,7 @@ jobs:
               --name ai-container \
               --restart always \
               -p 80:8000 \
-              --env-file .env \
+              -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+              -e VECTOR_STORE_ID=${{ secrets.VECTOR_STORE_ID }} \
               ai-chatbot
           EOF
