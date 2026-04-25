@@ -31,8 +31,8 @@ jobs:
             cd /root/mid_term_task
 
             # 🔥 убить ВСЕ контейнеры (чтобы порт не был занят)
-            docker stop $(docker ps -q) || true
-            docker rm $(docker ps -aq) || true
+            docker ps -q | xargs -r docker stop
+            docker ps -aq | xargs -r docker rm
 
             # 🔥 билд без кеша
             docker build --no-cache -t ai-chatbot .
