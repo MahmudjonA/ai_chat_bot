@@ -9,26 +9,22 @@ client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
 
-# 🔥 cache (чтобы не создавать каждый раз)
 VECTOR_STORE_ID = None
 
 
-# ---------- GET OR CREATE VECTOR STORE ----------
+# ---------- VECTOR STORE ----------
 def get_or_create_vector_store():
     global VECTOR_STORE_ID
 
-    # 1. если уже есть в памяти
     if VECTOR_STORE_ID:
         return VECTOR_STORE_ID
 
-    # 2. если есть в env
     env_id = os.getenv("VECTOR_STORE_ID")
     if env_id:
         VECTOR_STORE_ID = env_id
         print("✅ Using VECTOR_STORE_ID from ENV:", VECTOR_STORE_ID)
         return VECTOR_STORE_ID
 
-    # 3. пробуем найти существующий
     stores = client.vector_stores.list()
 
     for store in stores.data:
@@ -37,7 +33,6 @@ def get_or_create_vector_store():
             print("✅ Found existing store:", VECTOR_STORE_ID)
             return VECTOR_STORE_ID
 
-    # 4. если нет — создаём
     vs = client.vector_stores.create(name="faq_store")
     VECTOR_STORE_ID = vs.id
 
@@ -46,7 +41,7 @@ def get_or_create_vector_store():
     return VECTOR_STORE_ID
 
 
-# ---------- FILE UPLOAD ----------
+# ---------- FILE ----------
 def upload_file(file_path):
     with open(file_path, "rb") as f:
         file = client.files.create(
@@ -65,7 +60,6 @@ def attach_file_to_store(file_id):
     )
 
 
-# ---------- WAIT ----------
 def wait_until_ready(file_id):
     vs_id = get_or_create_vector_store()
 
@@ -87,39 +81,31 @@ def get_instructions(lang: str):
     if lang == "ru":
         return """
         Ты ассистент по документам.
-
-        Правила:
-        - отвечай только по документам
-        - если нет ответа — скажи "не найдено"
-        - не выдумывай
-
-        Формат:
-        - коротко
-        - просто
-        - только суть
+        Отвечай только по документам.
+        Если нет ответа — скажи "не найдено".
+        Коротко и по делу.
         """
 
-    elif lang == "en":
-        return """
-        Answer only using the documents.
-        If not found — say "not found".
-        Keep it short and simple.
-        """
-
-    elif lang == "uz":
+    if lang == "uz":
         return """
         Faqat hujjatlar asosida javob ber.
         Agar bo‘lmasa — "topilmadi".
-        Qisqa va oddiy yoz!
+        Qisqa yoz.
+        """
+
+    if lang == "en":
+        return """
+        Answer only using documents.
+        If not found — say "not found".
+        Keep it short.
         """
 
     return "Answer simply."
 
 
 # ---------- ASK ----------
-def ask_question(question, lang="ru"):
+def ask_question(question: str, lang: str = "ru"):
     vs_id = get_or_create_vector_store()
-
     instructions = get_instructions(lang)
 
     response = client.responses.create(
