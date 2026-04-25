@@ -9,14 +9,41 @@ client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
 
-# ✅ Берём store из .env
-VECTOR_STORE_ID = os.getenv("VECTOR_STORE_ID")
+# 🔥 cache (чтобы не создавать каждый раз)
+VECTOR_STORE_ID = None
 
 
-# ---------- CREATE STORE (только если нет) ----------
-def create_vector_store(name="faq_store"):
-    vs = client.vector_stores.create(name=name)
-    return vs.id
+# ---------- GET OR CREATE VECTOR STORE ----------
+def get_or_create_vector_store():
+    global VECTOR_STORE_ID
+
+    # 1. если уже есть в памяти
+    if VECTOR_STORE_ID:
+        return VECTOR_STORE_ID
+
+    # 2. если есть в env
+    env_id = os.getenv("VECTOR_STORE_ID")
+    if env_id:
+        VECTOR_STORE_ID = env_id
+        print("✅ Using VECTOR_STORE_ID from ENV:", VECTOR_STORE_ID)
+        return VECTOR_STORE_ID
+
+    # 3. пробуем найти существующий
+    stores = client.vector_stores.list()
+
+    for store in stores.data:
+        if store.name == "faq_store":
+            VECTOR_STORE_ID = store.id
+            print("✅ Found existing store:", VECTOR_STORE_ID)
+            return VECTOR_STORE_ID
+
+    # 4. если нет — создаём
+    vs = client.vector_stores.create(name="faq_store")
+    VECTOR_STORE_ID = vs.id
+
+    print("🔥 Created NEW vector store:", VECTOR_STORE_ID)
+
+    return VECTOR_STORE_ID
 
 
 # ---------- FILE UPLOAD ----------
@@ -30,22 +57,28 @@ def upload_file(file_path):
 
 
 def attach_file_to_store(file_id):
+    vs_id = get_or_create_vector_store()
+
     client.vector_stores.files.create(
-        vector_store_id=VECTOR_STORE_ID,
+        vector_store_id=vs_id,
         file_id=file_id
     )
 
 
 # ---------- WAIT ----------
 def wait_until_ready(file_id):
+    vs_id = get_or_create_vector_store()
+
     while True:
         status = client.vector_stores.files.retrieve(
-            vector_store_id=VECTOR_STORE_ID,
+            vector_store_id=vs_id,
             file_id=file_id
         )
 
         if status.status == "completed":
             return True
+
+        print("⌛ Processing file...")
         time.sleep(2)
 
 
@@ -85,6 +118,8 @@ def get_instructions(lang: str):
 
 # ---------- ASK ----------
 def ask_question(question, lang="ru"):
+    vs_id = get_or_create_vector_store()
+
     instructions = get_instructions(lang)
 
     response = client.responses.create(
@@ -92,25 +127,9 @@ def ask_question(question, lang="ru"):
         input=question,
         tools=[{
             "type": "file_search",
-            "vector_store_ids": [VECTOR_STORE_ID],
+            "vector_store_ids": [vs_id],
         }],
         instructions=instructions
     )
 
     return response.output_text
-
-def get_or_create_vector_store():
-    store_id = os.getenv("VECTOR_STORE_ID")
-
-    # если уже есть — используем
-    if store_id:
-        return store_id
-
-    # если нет — создаём новый
-    vs = client.vector_stores.create(name="faq_store")
-
-    print("🔥 NEW VECTOR STORE CREATED:", vs.id)
-    print("👉 ADD THIS TO .env:")
-    print(f"VECTOR_STORE_ID={vs.id}")
-
-    return vs.id
