@@ -119,3 +119,16 @@ def ask_question(question: str, lang: str = "ru"):
     )
 
     return response.output_text
+
+def clear_vector_store():
+    vs_id = get_or_create_vector_store()
+
+    files = client.vector_stores.files.list(vector_store_id=vs_id)
+
+    for f in files.data:
+        client.vector_stores.files.delete(
+            vector_store_id=vs_id,
+            file_id=f.id
+        )
+
+    return True

@@ -6,6 +6,7 @@ from services.openai_service import (
     upload_file,
     attach_file_to_store,
     wait_until_ready,
+    clear_vector_store
 )
 
 router = APIRouter()
@@ -34,4 +35,13 @@ async def upload(file: UploadFile = File(...)):
     return {
         "message": "File uploaded and indexed ✅",
         "file_id": file_id,
+    }
+
+
+@router.delete("/clear")
+async def clear_store():
+    clear_vector_store()
+
+    return {
+        "message": "Vector store cleared ✅"
     }
