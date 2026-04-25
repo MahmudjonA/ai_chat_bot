@@ -22,15 +22,22 @@ jobs:
       - name: Deploy to server
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << EOF
-            cd /root/mid_term_task || git clone https://github.com/MahmudjonA/ai_chat_bot.git /root/mid_term_task
+
+            set -e  # ❗ остановка при ошибке
+
+            # 🔥 всегда свежий код
+            rm -rf /root/mid_term_task
+            git clone https://github.com/MahmudjonA/ai_chat_bot.git /root/mid_term_task
             cd /root/mid_term_task
-            git pull
 
-            docker stop ai-container || true
-            docker rm ai-container || true
+            # 🔥 убить ВСЕ контейнеры (чтобы порт не был занят)
+            docker stop $(docker ps -q) || true
+            docker rm $(docker ps -aq) || true
 
-            docker build -t ai-chatbot .
+            # 🔥 билд без кеша
+            docker build --no-cache -t ai-chatbot .
 
+            # 🔥 запуск
             docker run -d \
               --name ai-container \
               --restart always \
@@ -38,4 +45,5 @@ jobs:
               -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
               -e VECTOR_STORE_ID=${{ secrets.VECTOR_STORE_ID }} \
               ai-chatbot
+
           EOF
